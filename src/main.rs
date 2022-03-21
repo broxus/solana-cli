@@ -27,9 +27,9 @@ fn main() -> anyhow::Result<()> {
                         .help("Path to the program"),
                 )
                 .arg(
-                    Arg::with_name("multisig")
-                        .long("multisig")
-                        .value_name("MULTISIG")
+                    Arg::with_name("authority")
+                        .long("authority")
+                        .value_name("AUTHORITY")
                         .takes_value(true)
                         .required(true)
                         .help("Multsig address"),
@@ -55,9 +55,9 @@ fn main() -> anyhow::Result<()> {
                         .help("Path to the program"),
                 )
                 .arg(
-                    Arg::with_name("multisig")
-                        .long("multisig")
-                        .value_name("MULTISIG")
+                    Arg::with_name("authority")
+                        .long("authority")
+                        .value_name("AUTHORITY")
                         .takes_value(true)
                         .required(true)
                         .help("Multsig address"),
@@ -93,12 +93,12 @@ fn main() -> anyhow::Result<()> {
             let buffer = Keypair::new();
             println!("Buffer key: {}", buffer.pubkey());
 
-            let multisig_pubkey = Pubkey::from_str(
-                value_of::<String>(arg_matches, "multisig")
+            let authority_pubkey = Pubkey::from_str(
+                value_of::<String>(arg_matches, "authority")
                     .ok_or(Error::InvalidPubkey)?
                     .as_str(),
             )?;
-            println!("Program authority: {}", multisig_pubkey);
+            println!("Program authority: {}", authority_pubkey);
 
             let program_path =
                 value_of::<String>(arg_matches, "program-path").ok_or(Error::InvalidProgramPath)?;
@@ -120,7 +120,7 @@ fn main() -> anyhow::Result<()> {
                 &connection,
             )?;
 
-            set_program_authority(&payer, &program.pubkey(), &multisig_pubkey, &connection)?;
+            set_program_authority(&payer, &program.pubkey(), &authority_pubkey, &connection)?;
         }
         ("upload-program-buffer", Some(arg_matches)) => {
             let payer = match value_of::<String>(arg_matches, "payer-path") {
@@ -133,12 +133,12 @@ fn main() -> anyhow::Result<()> {
             let buffer = Keypair::new();
             println!("Buffer key: {}", buffer.pubkey());
 
-            let multisig_pubkey = Pubkey::from_str(
-                value_of::<String>(arg_matches, "multisig")
+            let authority_pubkey = Pubkey::from_str(
+                value_of::<String>(arg_matches, "authority")
                     .ok_or(Error::InvalidPubkey)?
                     .as_str(),
             )?;
-            println!("Buffer authority: {}", multisig_pubkey);
+            println!("Buffer authority: {}", authority_pubkey);
 
             let program_path =
                 value_of::<String>(arg_matches, "program-path").ok_or(Error::InvalidProgramPath)?;
@@ -151,7 +151,7 @@ fn main() -> anyhow::Result<()> {
                 &payer,
                 &payer,
                 &buffer.pubkey(),
-                &multisig_pubkey,
+                &authority_pubkey,
                 &connection,
             )?;
         }
