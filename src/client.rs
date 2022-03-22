@@ -27,17 +27,13 @@ pub fn create_buffer(
     payer: &Keypair,
     buffer: &Keypair,
     authority_address: &Pubkey,
-    program_path: &str,
+    program_len: usize,
     connection: &RpcClient,
 ) -> Result<()> {
     utils::print_header("Creating buffer");
 
-    let program_data = utils::read_elf(program_path)?;
-
-    let buffer_data_len = program_data.len();
-
     let minimum_balance = connection.get_minimum_balance_for_rent_exemption(
-        UpgradeableLoaderState::programdata_len(buffer_data_len)?,
+        UpgradeableLoaderState::programdata_len(program_len)?,
     )?;
 
     let mut transaction = Transaction::new_with_payer(
@@ -46,7 +42,7 @@ pub fn create_buffer(
             &buffer.pubkey(),
             authority_address,
             minimum_balance,
-            program_data.len(),
+            program_len,
         )?,
         Some(&payer.pubkey()),
     );
@@ -62,7 +58,7 @@ pub fn create_buffer(
 pub fn write_buffer(
     payer: &Keypair,
     buffer_pubkey: &Pubkey,
-    program_path: &str,
+    program_data: &[u8],
     connection: &RpcClient,
 ) -> Result<()> {
     utils::print_header("Writing buffer");
@@ -74,8 +70,6 @@ pub fn write_buffer(
             bpf_loader_upgradeable::write(buffer_pubkey, &payer.pubkey(), offset, bytes);
         Message::new_with_blockhash(&[instruction], Some(&payer.pubkey()), &blockhash)
     };
-
-    let program_data = utils::read_elf(program_path)?;
 
     let mut write_messages = vec![];
     let chunk_size = utils::calculate_max_chunk_size(&create_msg);
@@ -126,12 +120,10 @@ pub fn deploy(
     payer: &Keypair,
     program: &Keypair,
     buffer_pubkey: &Pubkey,
-    program_path: &str,
+    max_data_len: usize,
     connection: &RpcClient,
 ) -> Result<()> {
     utils::print_header("Deploying program");
-
-    let program_data = utils::read_elf(program_path)?;
 
     let mut transaction = Transaction::new_with_payer(
         &bpf_loader_upgradeable::deploy_with_max_program_len(
@@ -141,7 +133,7 @@ pub fn deploy(
             &payer.pubkey(),
             connection
                 .get_minimum_balance_for_rent_exemption(UpgradeableLoaderState::program_len()?)?,
-            program_data.len(),
+            max_data_len,
         )?,
         Some(&payer.pubkey()),
     );

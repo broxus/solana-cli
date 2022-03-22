@@ -41,6 +41,14 @@ fn main() -> anyhow::Result<()> {
                         .takes_value(true)
                         .required(false)
                         .help("Path to the payer keypair"),
+                )
+                .arg(
+                    Arg::with_name("program-size")
+                        .long("program-size")
+                        .value_name("PROGRAM_SIZE")
+                        .takes_value(true)
+                        .required(false)
+                        .help("Program size"),
                 ),
         )
         .subcommand(
@@ -103,9 +111,16 @@ fn main() -> anyhow::Result<()> {
             let program_path =
                 value_of::<String>(arg_matches, "program-path").ok_or(Error::InvalidProgramPath)?;
 
-            create_buffer(&payer, &buffer, &payer.pubkey(), &program_path, &connection)?;
+            let program_data = read_elf(&program_path)?;
 
-            write_buffer(&payer, &buffer.pubkey(), &program_path, &connection)?;
+            let max_data_len = match value_of::<usize>(arg_matches, "program-size") {
+                Some(len) => len * 1000,
+                None => program_data.len(),
+            };
+
+            create_buffer(&payer, &buffer, &payer.pubkey(), max_data_len, &connection)?;
+
+            write_buffer(&payer, &buffer.pubkey(), &program_data, &connection)?;
 
             let program = Keypair::new();
             let keypair_file = get_keypair_file(&program_path);
@@ -116,7 +131,7 @@ fn main() -> anyhow::Result<()> {
                 &payer,
                 &program,
                 &buffer.pubkey(),
-                &program_path,
+                max_data_len,
                 &connection,
             )?;
 
@@ -143,9 +158,17 @@ fn main() -> anyhow::Result<()> {
             let program_path =
                 value_of::<String>(arg_matches, "program-path").ok_or(Error::InvalidProgramPath)?;
 
-            create_buffer(&payer, &buffer, &payer.pubkey(), &program_path, &connection)?;
+            let program_data = read_elf(&program_path)?;
 
-            write_buffer(&payer, &buffer.pubkey(), &program_path, &connection)?;
+            create_buffer(
+                &payer,
+                &buffer,
+                &payer.pubkey(),
+                program_data.len(),
+                &connection,
+            )?;
+
+            write_buffer(&payer, &buffer.pubkey(), &program_data, &connection)?;
 
             set_buffer_authority(
                 &payer,
