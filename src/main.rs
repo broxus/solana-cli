@@ -32,12 +32,12 @@ fn main() -> anyhow::Result<()> {
                         .value_name("AUTHORITY")
                         .takes_value(true)
                         .required(true)
-                        .help("Multsig address"),
+                        .help("Multisig address"),
                 )
                 .arg(
-                    Arg::with_name("payer-path")
-                        .long("payer-path")
-                        .value_name("PAYER_PATH")
+                    Arg::with_name("payer-keypair")
+                        .long("payer-keypair")
+                        .value_name("PAYER_KEYPAIR")
                         .takes_value(true)
                         .required(false)
                         .help("Path to the payer keypair"),
@@ -71,12 +71,40 @@ fn main() -> anyhow::Result<()> {
                         .help("Multsig address"),
                 )
                 .arg(
-                    Arg::with_name("payer-path")
-                        .long("payer-path")
-                        .value_name("PAYER_PATH")
+                    Arg::with_name("payer-keypair")
+                        .long("payer-keypair")
+                        .value_name("PAYER_KEYPAIR")
                         .takes_value(true)
                         .required(false)
                         .help("Path to the payer keypair"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("set-program-authority")
+                .about("Set a program's authority.")
+                .arg(
+                    Arg::with_name("program")
+                        .long("program")
+                        .value_name("PROGRAM")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Program address"),
+                )
+                .arg(
+                    Arg::with_name("current-authority-keypair")
+                        .long("current-authority-keypair")
+                        .value_name("CURRENT_AUTHORITY_KEYPAIR")
+                        .takes_value(true)
+                        .required(false)
+                        .help("Path to the current authority keypair"),
+                )
+                .arg(
+                    Arg::with_name("new-authority")
+                        .long("new-authority")
+                        .value_name("NEW_AUTHORITY")
+                        .takes_value(true)
+                        .required(true)
+                        .help("New authority address"),
                 ),
         )
         .get_matches();
@@ -91,7 +119,7 @@ fn main() -> anyhow::Result<()> {
 
     let _ = match (sub_command, sub_matches) {
         ("deploy", Some(arg_matches)) => {
-            let payer = match value_of::<String>(arg_matches, "payer-path") {
+            let payer = match value_of::<String>(arg_matches, "payer-keypair") {
                 None => get_payer()?,
                 Some(path) => read_keypair_file(&path)
                     .map_err(|_| anyhow::Error::new(Error::KeypairReadError))?,
@@ -138,7 +166,7 @@ fn main() -> anyhow::Result<()> {
             set_program_authority(&payer, &program.pubkey(), &authority_pubkey, &connection)?;
         }
         ("upload-program-buffer", Some(arg_matches)) => {
-            let payer = match value_of::<String>(arg_matches, "payer-path") {
+            let payer = match value_of::<String>(arg_matches, "payer-keypair") {
                 None => get_payer()?,
                 Some(path) => read_keypair_file(&path)
                     .map_err(|_| anyhow::Error::new(Error::KeypairReadError))?,
@@ -175,6 +203,36 @@ fn main() -> anyhow::Result<()> {
                 &payer,
                 &buffer.pubkey(),
                 &authority_pubkey,
+                &connection,
+            )?;
+        }
+        ("set-program-authority", Some(arg_matches)) => {
+            let current_authority =
+                match value_of::<String>(arg_matches, "current-authority-keypair") {
+                    None => get_payer()?,
+                    Some(path) => read_keypair_file(&path)
+                        .map_err(|_| anyhow::Error::new(Error::KeypairReadError))?,
+                };
+            println!("Current authority: {}", current_authority.pubkey());
+
+            let program_pubkey = Pubkey::from_str(
+                value_of::<String>(arg_matches, "program")
+                    .ok_or(Error::InvalidPubkey)?
+                    .as_str(),
+            )?;
+            println!("Program: {}", program_pubkey);
+
+            let new_authority_pubkey = Pubkey::from_str(
+                value_of::<String>(arg_matches, "new-authority")
+                    .ok_or(Error::InvalidPubkey)?
+                    .as_str(),
+            )?;
+            println!("Program: {}", program_pubkey);
+
+            set_program_authority(
+                &current_authority,
+                &program_pubkey,
+                &new_authority_pubkey,
                 &connection,
             )?;
         }
