@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand};
-use solana_bridge::round_loader::{RelayRoundProposalEventWithLen, MAX_RELAYS};
+use solana_bridge::round_loader::{RelayRoundProposalEventWithLen, MAX_RELAYS, MIN_RELAYS};
 
 use solana_clap_utils::input_parsers::{value_of, values_of};
 use solana_clap_utils::input_validators::{is_keypair, is_valid_pubkey};
@@ -167,7 +167,7 @@ fn main() -> anyhow::Result<()> {
                         .validator(is_valid_pubkey)
                         .takes_value(true)
                         .required(true)
-                        .min_values(3)
+                        .min_values(MIN_RELAYS)
                         .max_values(MAX_RELAYS as u64)
                         .help("List of Relays in proposal"),
                 )
