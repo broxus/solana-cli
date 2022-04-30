@@ -1,8 +1,10 @@
 use std::str::FromStr;
 
 use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand};
+use solana_bridge::round_loader::{RelayRoundProposalEventWithLen, MAX_RELAYS};
 
-use solana_clap_utils::input_parsers::value_of;
+use solana_clap_utils::input_parsers::{value_of, values_of};
+use solana_clap_utils::input_validators::{is_keypair, is_valid_pubkey};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{read_keypair_file, write_keypair_file, Keypair, Signer};
 
@@ -29,6 +31,7 @@ fn main() -> anyhow::Result<()> {
                 .arg(
                     Arg::with_name("authority")
                         .long("authority")
+                        .validator(is_valid_pubkey)
                         .value_name("AUTHORITY")
                         .takes_value(true)
                         .required(true)
@@ -37,6 +40,7 @@ fn main() -> anyhow::Result<()> {
                 .arg(
                     Arg::with_name("payer-keypair")
                         .long("payer-keypair")
+                        .validator(is_keypair)
                         .value_name("PAYER_KEYPAIR")
                         .takes_value(true)
                         .required(false)
@@ -65,6 +69,7 @@ fn main() -> anyhow::Result<()> {
                 .arg(
                     Arg::with_name("authority")
                         .long("authority")
+                        .validator(is_valid_pubkey)
                         .value_name("AUTHORITY")
                         .takes_value(true)
                         .required(true)
@@ -73,6 +78,7 @@ fn main() -> anyhow::Result<()> {
                 .arg(
                     Arg::with_name("payer-keypair")
                         .long("payer-keypair")
+                        .validator(is_keypair)
                         .value_name("PAYER_KEYPAIR")
                         .takes_value(true)
                         .required(false)
@@ -85,6 +91,7 @@ fn main() -> anyhow::Result<()> {
                 .arg(
                     Arg::with_name("program")
                         .long("program")
+                        .validator(is_valid_pubkey)
                         .value_name("PROGRAM")
                         .takes_value(true)
                         .required(true)
@@ -93,6 +100,7 @@ fn main() -> anyhow::Result<()> {
                 .arg(
                     Arg::with_name("current-authority-keypair")
                         .long("current-authority-keypair")
+                        .validator(is_keypair)
                         .value_name("CURRENT_AUTHORITY_KEYPAIR")
                         .takes_value(true)
                         .required(false)
@@ -101,10 +109,84 @@ fn main() -> anyhow::Result<()> {
                 .arg(
                     Arg::with_name("new-authority")
                         .long("new-authority")
+                        .validator(is_valid_pubkey)
                         .value_name("NEW_AUTHORITY")
                         .takes_value(true)
                         .required(true)
                         .help("New authority address"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("create-relay-round")
+                .about("Set a program's authority.")
+                .arg(
+                    Arg::with_name("event_timestamp")
+                        .long("event-timestamp")
+                        .value_name("EVENT_TIMESTAMP")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Everscale event timestamp"),
+                )
+                .arg(
+                    Arg::with_name("transaction_lt")
+                        .long("transaction-lt")
+                        .value_name("TRANSACTION_LT")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Everscale event transaction lt"),
+                )
+                .arg(
+                    Arg::with_name("configuration")
+                        .long("configuration")
+                        .validator(is_valid_pubkey)
+                        .value_name("CONFIGURATION")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Everscale event configuration"),
+                )
+                .arg(
+                    Arg::with_name("round_number")
+                        .long("round-number")
+                        .value_name("ROUND_NUMBER")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Current Relay Round number"),
+                )
+                .arg(
+                    Arg::with_name("proposal_round_number")
+                        .long("proposal-round-number")
+                        .value_name("PROPOSAL_ROUND_NUMBER")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Relay Round number in proposal"),
+                )
+                .arg(
+                    Arg::with_name("proposal_relays")
+                        .long("proposal-relays")
+                        .value_name("PROPOSAL_RELAYS")
+                        .validator(is_valid_pubkey)
+                        .takes_value(true)
+                        .required(true)
+                        .min_values(3)
+                        .max_values(MAX_RELAYS as u64)
+                        .help("List of Relays in proposal"),
+                )
+                .arg(
+                    Arg::with_name("proposal_round_end")
+                        .long("proposal-round-end")
+                        .value_name("PROPOSAL_ROUND_END")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Round end value in proposal"),
+                )
+                .arg(
+                    Arg::with_name("payer_keypair")
+                        .long("payer-keypair")
+                        .validator(is_keypair)
+                        .value_name("PAYER_KEYPAIR")
+                        .takes_value(true)
+                        .required(false)
+                        .help("Path to the payer keypair"),
                 ),
         )
         .get_matches();
@@ -233,6 +315,75 @@ fn main() -> anyhow::Result<()> {
                 &current_authority,
                 &program_pubkey,
                 &new_authority_pubkey,
+                &connection,
+            )?;
+        }
+        ("create-relay-round", Some(arg_matches)) => {
+            let payer = match value_of::<String>(arg_matches, "payer-keypair") {
+                None => get_payer()?,
+                Some(path) => read_keypair_file(&path)
+                    .map_err(|_| anyhow::Error::new(Error::KeypairReadError))?,
+            };
+            println!("Creating proposal with key: {}", payer.pubkey());
+
+            let event_timestamp = value_of::<u32>(arg_matches, "event_timestamp")
+                .ok_or(Error::InvalidEventTimestamp)?;
+
+            let transaction_lt = value_of::<u64>(arg_matches, "transaction_lt")
+                .ok_or(Error::InvalidTransactionLt)?;
+
+            let configuration = Pubkey::from_str(
+                value_of::<String>(arg_matches, "configuration")
+                    .ok_or(Error::InvalidConfiguration)?
+                    .as_str(),
+            )?;
+
+            let round_number =
+                value_of::<u32>(arg_matches, "round_number").ok_or(Error::InvalidRoundNumber)?;
+
+            let proposal_round_number = value_of::<u32>(arg_matches, "proposal_round_number")
+                .ok_or(Error::InvalidProposalRoundNumber)?;
+
+            let proposal_relays = values_of::<String>(arg_matches, "proposal_relays")
+                .ok_or(Error::InvalidProposalRelays)?;
+
+            let mut relays = vec![];
+            for proposal_relay in proposal_relays {
+                relays.push(Pubkey::from_str(&proposal_relay)?);
+            }
+
+            let proposal_round_end = value_of::<u32>(arg_matches, "proposal_round_end")
+                .ok_or(Error::InvalidRoundNumber)?;
+
+            create_relay_round_proposal(
+                &payer,
+                event_timestamp,
+                transaction_lt,
+                configuration,
+                &connection,
+            )?;
+
+            let proposal = RelayRoundProposalEventWithLen::new(
+                proposal_round_number,
+                relays,
+                proposal_round_end,
+            )?;
+
+            write_relay_round_proposal(
+                &payer,
+                event_timestamp,
+                transaction_lt,
+                configuration,
+                proposal,
+                &connection,
+            )?;
+
+            finalize_relay_round_proposal(
+                &payer,
+                event_timestamp,
+                transaction_lt,
+                configuration,
+                round_number,
                 &connection,
             )?;
         }

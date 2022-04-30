@@ -1,4 +1,7 @@
+use borsh::BorshSerialize;
 use indicatif::ProgressBar;
+
+use solana_bridge::round_loader::RelayRoundProposalEventWithLen;
 use solana_client::rpc_client::RpcClient;
 use solana_program::bpf_loader_upgradeable;
 use solana_program::bpf_loader_upgradeable::UpgradeableLoaderState;
@@ -167,6 +170,123 @@ pub fn set_program_authority(
     connection.send_and_confirm_transaction(&transaction)?;
 
     println!("Authority: {}", new_authority_address);
+
+    Ok(())
+}
+
+pub fn create_relay_round_proposal(
+    payer: &Keypair,
+    event_timestamp: u32,
+    event_transaction_lt: u64,
+    event_configuration: Pubkey,
+    connection: &RpcClient,
+) -> Result<()> {
+    utils::print_header("Create Relay Round Proposal");
+
+    let mut transaction = Transaction::new_with_payer(
+        &[solana_bridge::round_loader::create_proposal_ix(
+            &payer.pubkey(),
+            event_timestamp,
+            event_transaction_lt,
+            event_configuration,
+        )],
+        Some(&payer.pubkey()),
+    );
+    transaction.sign(&[payer], connection.get_latest_blockhash()?);
+
+    connection.send_and_confirm_transaction(&transaction)?;
+
+    let setting_address = solana_bridge::round_loader::get_settings_address();
+    let proposal_address = solana_bridge::round_loader::get_proposal_address(
+        &payer.pubkey(),
+        &setting_address,
+        event_timestamp,
+        event_transaction_lt,
+        &event_configuration,
+    );
+
+    println!("Proposal address: {}", proposal_address);
+
+    Ok(())
+}
+
+pub fn write_relay_round_proposal(
+    payer: &Keypair,
+    event_timestamp: u32,
+    event_transaction_lt: u64,
+    event_configuration: Pubkey,
+    proposal_data: RelayRoundProposalEventWithLen,
+    connection: &RpcClient,
+) -> Result<()> {
+    utils::print_header("Writing Relay Round Proposal");
+
+    let blockhash = connection.get_latest_blockhash()?;
+
+    let create_msg = |offset: u32, bytes: Vec<u8>| {
+        let instruction = solana_bridge::round_loader::write_proposal_ix(
+            &payer.pubkey(),
+            event_timestamp,
+            event_transaction_lt,
+            event_configuration,
+            offset,
+            bytes,
+        );
+        Message::new_with_blockhash(&[instruction], Some(&payer.pubkey()), &blockhash)
+    };
+
+    let mut write_messages = vec![];
+    let chunk_size = utils::calculate_max_chunk_size(&create_msg);
+    for (chunk, i) in proposal_data.try_to_vec()?.chunks(chunk_size).zip(0..) {
+        write_messages.push(create_msg((i * chunk_size) as u32, chunk.to_vec()));
+    }
+
+    let pb = ProgressBar::new(write_messages.len() as u64);
+    for message in write_messages {
+        pb.inc(1);
+
+        let transaction =
+            Transaction::new(&vec![payer], message, connection.get_latest_blockhash()?);
+        connection.send_and_confirm_transaction(&transaction)?;
+    }
+    pb.finish_with_message("done");
+
+    Ok(())
+}
+
+pub fn finalize_relay_round_proposal(
+    payer: &Keypair,
+    event_timestamp: u32,
+    event_transaction_lt: u64,
+    event_configuration: Pubkey,
+    round_number: u32,
+    connection: &RpcClient,
+) -> Result<()> {
+    utils::print_header("Finalize Relay Round Proposal");
+
+    let mut transaction = Transaction::new_with_payer(
+        &[solana_bridge::round_loader::finalize_proposal_ix(
+            &payer.pubkey(),
+            event_timestamp,
+            event_transaction_lt,
+            event_configuration,
+            round_number,
+        )],
+        Some(&payer.pubkey()),
+    );
+    transaction.sign(&[payer], connection.get_latest_blockhash()?);
+
+    connection.send_and_confirm_transaction(&transaction)?;
+
+    let setting_address = solana_bridge::round_loader::get_settings_address();
+    let proposal_address = solana_bridge::round_loader::get_proposal_address(
+        &payer.pubkey(),
+        &setting_address,
+        event_timestamp,
+        event_transaction_lt,
+        &event_configuration,
+    );
+
+    println!("Proposal address: {}", proposal_address);
 
     Ok(())
 }
