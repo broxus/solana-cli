@@ -167,7 +167,7 @@ fn main() -> anyhow::Result<()> {
                         .validator(is_valid_pubkey)
                         .takes_value(true)
                         .required(true)
-                        .min_values(MIN_RELAYS)
+                        .min_values(MIN_RELAYS as u64)
                         .max_values(MAX_RELAYS as u64)
                         .help("List of Relays in proposal"),
                 )
