@@ -47,6 +47,15 @@ fn main() -> anyhow::Result<()> {
                         .help("Path to the payer keypair"),
                 )
                 .arg(
+                    Arg::with_name("program-keypair")
+                        .long("program-keypair")
+                        .validator(is_keypair)
+                        .value_name("PROGRAM_KEYPAIR")
+                        .takes_value(true)
+                        .required(false)
+                        .help("Path to the program keypair"),
+                )
+                .arg(
                     Arg::with_name("program-size")
                         .long("program-size")
                         .value_name("PROGRAM_SIZE")
@@ -232,10 +241,17 @@ fn main() -> anyhow::Result<()> {
 
             write_buffer(&payer, &buffer.pubkey(), &program_data, &connection)?;
 
-            let program = Keypair::new();
-            let keypair_file = get_keypair_file(&program_path);
-            write_keypair_file(&program, keypair_file)
-                .map_err(|_| anyhow::Error::new(Error::KeypairReadError))?;
+            let program = match value_of::<String>(arg_matches, "program-keypair") {
+                None => {
+                    let program = Keypair::new();
+                    let keypair_file = get_keypair_file(&program_path);
+                    write_keypair_file(&program, keypair_file)
+                        .map_err(|_| anyhow::Error::new(Error::KeypairReadError))?;
+                    program
+                }
+                Some(path) => read_keypair_file(&path)
+                    .map_err(|_| anyhow::Error::new(Error::KeypairReadError))?,
+            };
 
             deploy(
                 &payer,
