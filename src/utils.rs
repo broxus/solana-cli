@@ -45,6 +45,16 @@ pub fn get_rpc_url() -> Result<String> {
     }
 }
 
+pub fn get_ws_url() -> Result<String> {
+    let config = get_config()?;
+    match config["websocket_url"].as_str() {
+        Some(s) => Ok(s.to_string()),
+        None => Err(Error::InvalidConfig(
+            "missing `websocket_url` field".to_string(),
+        )),
+    }
+}
+
 pub fn get_payer() -> Result<Keypair> {
     let config = get_config()?;
     let path = match config["keypair_path"].as_str() {

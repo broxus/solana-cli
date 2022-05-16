@@ -32,9 +32,14 @@ pub enum Error {
     InvalidProposalRoundNumber,
     #[error("invalid proposal relays")]
     InvalidProposalRelays,
+    #[error("({0}) write transactions failed")]
+    WriteTransactions(usize),
 
     #[error("solana client error: ({0})")]
     ClientError(#[from] solana_client::client_error::ClientError),
+
+    #[error("tpu sender error: ({0})")]
+    TpuSenderError(#[from] solana_client::tpu_client::TpuSenderError),
 
     #[error("solana instruction error: ({0})")]
     InstructionError(#[from] solana_program::instruction::InstructionError),

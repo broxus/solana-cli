@@ -1,8 +1,9 @@
 use borsh::BorshSerialize;
-use indicatif::ProgressBar;
+use std::sync::Arc;
 
 use solana_bridge::round_loader::RelayRoundProposalEventWithLen;
 use solana_client::rpc_client::RpcClient;
+use solana_client::tpu_client::{TpuClient, TpuClientConfig};
 use solana_program::bpf_loader_upgradeable;
 use solana_program::bpf_loader_upgradeable::UpgradeableLoaderState;
 use solana_program::message::Message;
@@ -11,19 +12,19 @@ use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::Transaction;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::utils;
 
 /// Establishes a RPC connection with the solana cluster configured by
 /// `solana config set --url <URL>`. Information about what cluster
 /// has been configured is gleened from the solana config file
 /// `~/.config/solana/cli/config.yml`.
-pub fn establish_connection() -> Result<RpcClient> {
+pub fn establish_connection() -> Result<Arc<RpcClient>> {
     let rpc_url = utils::get_rpc_url()?;
-    Ok(RpcClient::new_with_commitment(
+    Ok(Arc::new(RpcClient::new_with_commitment(
         rpc_url,
         CommitmentConfig::confirmed(),
-    ))
+    )))
 }
 
 pub fn create_buffer(
@@ -31,7 +32,7 @@ pub fn create_buffer(
     buffer: &Keypair,
     authority_address: &Pubkey,
     program_len: usize,
-    connection: &RpcClient,
+    connection: &Arc<RpcClient>,
 ) -> Result<()> {
     utils::print_header("Creating buffer");
 
@@ -62,12 +63,13 @@ pub fn write_buffer(
     payer: &Keypair,
     buffer_pubkey: &Pubkey,
     program_data: &[u8],
-    connection: &RpcClient,
+    connection: &Arc<RpcClient>,
 ) -> Result<()> {
     utils::print_header("Writing buffer");
 
     let blockhash = connection.get_latest_blockhash()?;
 
+    // Get messages
     let create_msg = |offset: u32, bytes: Vec<u8>| {
         let instruction =
             bpf_loader_upgradeable::write(buffer_pubkey, &payer.pubkey(), offset, bytes);
@@ -80,15 +82,28 @@ pub fn write_buffer(
         write_messages.push(create_msg((i * chunk_size) as u32, chunk.to_vec()));
     }
 
-    let pb = ProgressBar::new(write_messages.len() as u64);
-    for message in write_messages {
-        pb.inc(1);
+    // Send message
+    let websocket_url = utils::get_ws_url()?;
+    let tpu_client = TpuClient::new(
+        connection.clone(),
+        &websocket_url,
+        TpuClientConfig::default(),
+    )
+    .map_err(Error::TpuSenderError)?;
 
-        let transaction =
-            Transaction::new(&vec![payer], message, connection.get_latest_blockhash()?);
-        connection.send_and_confirm_transaction(&transaction)?;
+    let transaction_errors = tpu_client
+        .send_and_confirm_messages_with_spinner(&write_messages, &[payer])
+        .map_err(Error::TpuSenderError)?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+
+    if !transaction_errors.is_empty() {
+        for transaction_error in &transaction_errors {
+            eprintln!("{:?}", transaction_error);
+        }
+        return Err(Error::WriteTransactions(transaction_errors.len()));
     }
-    pb.finish_with_message("done");
 
     Ok(())
 }
@@ -98,7 +113,7 @@ pub fn set_buffer_authority(
     current_authority: &Keypair,
     buffer_address: &Pubkey,
     new_authority_address: &Pubkey,
-    connection: &RpcClient,
+    connection: &Arc<RpcClient>,
 ) -> Result<()> {
     utils::print_header("Setting buffer authority");
 
@@ -124,7 +139,7 @@ pub fn deploy(
     program: &Keypair,
     buffer_pubkey: &Pubkey,
     max_data_len: usize,
-    connection: &RpcClient,
+    connection: &Arc<RpcClient>,
 ) -> Result<()> {
     utils::print_header("Deploying program");
 
@@ -153,7 +168,7 @@ pub fn set_program_authority(
     current_authority: &Keypair,
     program_address: &Pubkey,
     new_authority_address: &Pubkey,
-    connection: &RpcClient,
+    connection: &Arc<RpcClient>,
 ) -> Result<()> {
     utils::print_header("Setting program authority");
 
@@ -179,7 +194,7 @@ pub fn create_relay_round_proposal(
     event_timestamp: u32,
     event_transaction_lt: u64,
     event_configuration: Pubkey,
-    connection: &RpcClient,
+    connection: &Arc<RpcClient>,
 ) -> Result<()> {
     utils::print_header("Create Relay Round Proposal");
 
@@ -216,7 +231,7 @@ pub fn write_relay_round_proposal(
     event_transaction_lt: u64,
     event_configuration: Pubkey,
     proposal_data: RelayRoundProposalEventWithLen,
-    connection: &RpcClient,
+    connection: &Arc<RpcClient>,
 ) -> Result<()> {
     utils::print_header("Writing Relay Round Proposal");
 
@@ -240,15 +255,28 @@ pub fn write_relay_round_proposal(
         write_messages.push(create_msg((i * chunk_size) as u32, chunk.to_vec()));
     }
 
-    let pb = ProgressBar::new(write_messages.len() as u64);
-    for message in write_messages {
-        pb.inc(1);
+    // Send message
+    let websocket_url = utils::get_ws_url()?;
+    let tpu_client = TpuClient::new(
+        connection.clone(),
+        &websocket_url,
+        TpuClientConfig::default(),
+    )
+    .map_err(Error::TpuSenderError)?;
 
-        let transaction =
-            Transaction::new(&vec![payer], message, connection.get_latest_blockhash()?);
-        connection.send_and_confirm_transaction(&transaction)?;
+    let transaction_errors = tpu_client
+        .send_and_confirm_messages_with_spinner(&write_messages, &[payer])
+        .map_err(Error::TpuSenderError)?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+
+    if !transaction_errors.is_empty() {
+        for transaction_error in &transaction_errors {
+            eprintln!("{:?}", transaction_error);
+        }
+        return Err(Error::WriteTransactions(transaction_errors.len()));
     }
-    pb.finish_with_message("done");
 
     Ok(())
 }
@@ -259,7 +287,7 @@ pub fn finalize_relay_round_proposal(
     event_transaction_lt: u64,
     event_configuration: Pubkey,
     round_number: u32,
-    connection: &RpcClient,
+    connection: &Arc<RpcClient>,
 ) -> Result<()> {
     utils::print_header("Finalize Relay Round Proposal");
 

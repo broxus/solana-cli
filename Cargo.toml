@@ -12,7 +12,6 @@ borsh = "0.9"
 clap = "2.33.3"
 console = "0.14.0"
 home = "0.5.3"
-indicatif = "0.16.2"
 thiserror = "1.0"
 yaml-rust = "0.4"
 

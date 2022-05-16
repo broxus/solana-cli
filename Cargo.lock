@@ -2695,7 +2695,6 @@ dependencies = [
  "clap",
  "console 0.14.1",
  "home",
- "indicatif",
  "solana-bridge",
  "solana-clap-utils",
  "solana-client",
