@@ -279,7 +279,7 @@ dependencies = [
 [[package]]
 name = "bridge-derive"
 version = "0.1.0"
-source = "git+ssh://git@gitlab.dexpa.io/solana-everscale-bridge/solana-bridge#18c78b44e11714b151ad513e9e08bdd9a6e6d0f0"
+source = "git+ssh://git@gitlab.dexpa.io/solana-everscale-bridge/solana-bridge#804331b6f783e0d7ac4abd09c85fa01d4d54db13"
 dependencies = [
  "darling",
  "proc-macro2 1.0.36",
@@ -290,15 +290,14 @@ dependencies = [
 [[package]]
 name = "bridge-utils"
 version = "0.1.0"
-source = "git+ssh://git@gitlab.dexpa.io/solana-everscale-bridge/solana-bridge#18c78b44e11714b151ad513e9e08bdd9a6e6d0f0"
+source = "git+ssh://git@gitlab.dexpa.io/solana-everscale-bridge/solana-bridge#804331b6f783e0d7ac4abd09c85fa01d4d54db13"
 dependencies = [
  "bincode",
  "borsh",
  "bridge-derive",
+ "hex",
  "serde",
  "solana-program",
- "spl-associated-token-account",
- "spl-token",
 ]
 
 [[package]]
@@ -1106,8 +1105,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "418d37c8b1d42553c93648be529cb70f920d3baf8ef469b74b9638df426e0b4c"
 dependencies = [
  "cfg-if",
+ "js-sys",
  "libc",
  "wasi 0.10.2+wasi-snapshot-preview1",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -1152,6 +1153,12 @@ checksum = "62b467343b94ba476dcb2500d242dadbb39557df889310ac77c5d99100aaac33"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "histogram"
@@ -2263,7 +2270,7 @@ dependencies = [
 [[package]]
 name = "round-loader"
 version = "0.1.0"
-source = "git+ssh://git@gitlab.dexpa.io/solana-everscale-bridge/solana-bridge#18c78b44e11714b151ad513e9e08bdd9a6e6d0f0"
+source = "git+ssh://git@gitlab.dexpa.io/solana-everscale-bridge/solana-bridge#804331b6f783e0d7ac4abd09c85fa01d4d54db13"
 dependencies = [
  "bincode",
  "borsh",
@@ -2643,7 +2650,7 @@ dependencies = [
 [[package]]
 name = "solana-bridge"
 version = "0.1.0"
-source = "git+ssh://git@gitlab.dexpa.io/solana-everscale-bridge/solana-bridge#18c78b44e11714b151ad513e9e08bdd9a6e6d0f0"
+source = "git+ssh://git@gitlab.dexpa.io/solana-everscale-bridge/solana-bridge#804331b6f783e0d7ac4abd09c85fa01d4d54db13"
 dependencies = [
  "borsh",
  "bridge-utils",
@@ -3559,19 +3566,21 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 [[package]]
 name = "token-proxy"
 version = "0.1.0"
-source = "git+ssh://git@gitlab.dexpa.io/solana-everscale-bridge/solana-bridge#18c78b44e11714b151ad513e9e08bdd9a6e6d0f0"
+source = "git+ssh://git@gitlab.dexpa.io/solana-everscale-bridge/solana-bridge#804331b6f783e0d7ac4abd09c85fa01d4d54db13"
 dependencies = [
  "bincode",
  "borsh",
  "bridge-derive",
  "bridge-utils",
  "enum-as-inner",
+ "getrandom 0.2.4",
  "round-loader",
  "serde",
  "solana-program",
  "spl-associated-token-account",
  "spl-token",
  "thiserror",
+ "uuid",
 ]
 
 [[package]]
@@ -3813,6 +3822,16 @@ name = "utf-8"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09cc8ee72d2a9becf2f2febe0205bbed8fc6615b7cb429ad062dc7b7ddd036a9"
+
+[[package]]
+name = "uuid"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
+dependencies = [
+ "getrandom 0.2.4",
+ "serde",
+]
 
 [[package]]
 name = "vec_map"

@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use borsh::BorshSerialize;
 use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand};
 use solana_bridge::round_loader::{RelayRoundProposalEventWithLen, MAX_RELAYS, MIN_RELAYS};
 
@@ -60,7 +61,7 @@ fn main() -> anyhow::Result<()> {
                         .long("program-size")
                         .value_name("PROGRAM_SIZE")
                         .takes_value(true)
-                        .required(false)
+                        .required(true)
                         .help("Program size"),
                 ),
         )
@@ -345,10 +346,10 @@ fn main() -> anyhow::Result<()> {
             let event_timestamp = value_of::<u32>(arg_matches, "event_timestamp")
                 .ok_or(Error::InvalidEventTimestamp)?;
 
-            let transaction_lt = value_of::<u64>(arg_matches, "transaction_lt")
+            let event_transaction_lt = value_of::<u64>(arg_matches, "transaction_lt")
                 .ok_or(Error::InvalidTransactionLt)?;
 
-            let configuration = Pubkey::from_str(
+            let event_configuration = Pubkey::from_str(
                 value_of::<String>(arg_matches, "configuration")
                     .ok_or(Error::InvalidConfiguration)?
                     .as_str(),
@@ -371,37 +372,33 @@ fn main() -> anyhow::Result<()> {
             let proposal_round_end = value_of::<u32>(arg_matches, "proposal_round_end")
                 .ok_or(Error::InvalidRoundNumber)?;
 
-            create_relay_round_proposal(
-                &payer,
-                event_timestamp,
-                transaction_lt,
-                configuration,
-                &connection,
-            )?;
-
             let proposal = RelayRoundProposalEventWithLen::new(
                 proposal_round_number,
                 relays,
                 proposal_round_end,
             )?;
 
-            write_relay_round_proposal(
+            let proposal_pubkey = solana_bridge::round_loader::get_proposal_address(
+                event_timestamp,
+                event_transaction_lt,
+                &event_configuration,
+                &proposal.data.try_to_vec()?,
+            );
+
+            println!("Proposal address: {}", proposal_pubkey);
+
+            create_relay_round_proposal(
                 &payer,
                 event_timestamp,
-                transaction_lt,
-                configuration,
-                proposal,
+                event_transaction_lt,
+                event_configuration,
+                &proposal,
                 &connection,
             )?;
 
-            finalize_relay_round_proposal(
-                &payer,
-                event_timestamp,
-                transaction_lt,
-                configuration,
-                round_number,
-                &connection,
-            )?;
+            write_relay_round_proposal(&payer, &proposal_pubkey, &proposal, &connection)?;
+
+            finalize_relay_round_proposal(&payer, &proposal_pubkey, round_number, &connection)?;
         }
         _ => {}
     };

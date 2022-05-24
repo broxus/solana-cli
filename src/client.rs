@@ -1,5 +1,6 @@
-use borsh::BorshSerialize;
 use std::sync::Arc;
+
+use borsh::BorshSerialize;
 
 use solana_bridge::round_loader::RelayRoundProposalEventWithLen;
 use solana_client::rpc_client::RpcClient;
@@ -194,6 +195,7 @@ pub fn create_relay_round_proposal(
     event_timestamp: u32,
     event_transaction_lt: u64,
     event_configuration: Pubkey,
+    proposal: &RelayRoundProposalEventWithLen,
     connection: &Arc<RpcClient>,
 ) -> Result<()> {
     utils::print_header("Create Relay Round Proposal");
@@ -201,9 +203,11 @@ pub fn create_relay_round_proposal(
     let mut transaction = Transaction::new_with_payer(
         &[solana_bridge::round_loader::create_proposal_ix(
             &payer.pubkey(),
+            &payer.pubkey(),
             event_timestamp,
             event_transaction_lt,
             event_configuration,
+            &proposal.data.try_to_vec()?,
         )],
         Some(&payer.pubkey()),
     );
@@ -211,26 +215,13 @@ pub fn create_relay_round_proposal(
 
     connection.send_and_confirm_transaction(&transaction)?;
 
-    let setting_address = solana_bridge::round_loader::get_settings_address();
-    let proposal_address = solana_bridge::round_loader::get_proposal_address(
-        &payer.pubkey(),
-        &setting_address,
-        event_timestamp,
-        event_transaction_lt,
-        &event_configuration,
-    );
-
-    println!("Proposal address: {}", proposal_address);
-
     Ok(())
 }
 
 pub fn write_relay_round_proposal(
     payer: &Keypair,
-    event_timestamp: u32,
-    event_transaction_lt: u64,
-    event_configuration: Pubkey,
-    proposal_data: RelayRoundProposalEventWithLen,
+    proposal_pubkey: &Pubkey,
+    proposal: &RelayRoundProposalEventWithLen,
     connection: &Arc<RpcClient>,
 ) -> Result<()> {
     utils::print_header("Writing Relay Round Proposal");
@@ -240,9 +231,7 @@ pub fn write_relay_round_proposal(
     let create_msg = |offset: u32, bytes: Vec<u8>| {
         let instruction = solana_bridge::round_loader::write_proposal_ix(
             &payer.pubkey(),
-            event_timestamp,
-            event_transaction_lt,
-            event_configuration,
+            proposal_pubkey,
             offset,
             bytes,
         );
@@ -251,7 +240,7 @@ pub fn write_relay_round_proposal(
 
     let mut write_messages = vec![];
     let chunk_size = utils::calculate_max_chunk_size(&create_msg);
-    for (chunk, i) in proposal_data.try_to_vec()?.chunks(chunk_size).zip(0..) {
+    for (chunk, i) in proposal.try_to_vec()?.chunks(chunk_size).zip(0..) {
         write_messages.push(create_msg((i * chunk_size) as u32, chunk.to_vec()));
     }
 
@@ -283,9 +272,7 @@ pub fn write_relay_round_proposal(
 
 pub fn finalize_relay_round_proposal(
     payer: &Keypair,
-    event_timestamp: u32,
-    event_transaction_lt: u64,
-    event_configuration: Pubkey,
+    proposal_pubkey: &Pubkey,
     round_number: u32,
     connection: &Arc<RpcClient>,
 ) -> Result<()> {
@@ -294,9 +281,7 @@ pub fn finalize_relay_round_proposal(
     let mut transaction = Transaction::new_with_payer(
         &[solana_bridge::round_loader::finalize_proposal_ix(
             &payer.pubkey(),
-            event_timestamp,
-            event_transaction_lt,
-            event_configuration,
+            proposal_pubkey,
             round_number,
         )],
         Some(&payer.pubkey()),
@@ -304,17 +289,6 @@ pub fn finalize_relay_round_proposal(
     transaction.sign(&[payer], connection.get_latest_blockhash()?);
 
     connection.send_and_confirm_transaction(&transaction)?;
-
-    let setting_address = solana_bridge::round_loader::get_settings_address();
-    let proposal_address = solana_bridge::round_loader::get_proposal_address(
-        &payer.pubkey(),
-        &setting_address,
-        event_timestamp,
-        event_transaction_lt,
-        &event_configuration,
-    );
-
-    println!("Proposal address: {}", proposal_address);
 
     Ok(())
 }
