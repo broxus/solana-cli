@@ -53,7 +53,7 @@ pub fn create_buffer(
     );
     transaction.sign(&[payer, buffer], connection.get_latest_blockhash()?);
 
-    connection.send_and_confirm_transaction(&transaction)?;
+    connection.send_and_confirm_transaction_with_spinner(&transaction)?;
 
     println!("Buffer: {}", buffer.pubkey());
 
@@ -128,7 +128,7 @@ pub fn set_buffer_authority(
     );
     transaction.sign(&[payer], connection.get_latest_blockhash()?);
 
-    connection.send_and_confirm_transaction(&transaction)?;
+    connection.send_and_confirm_transaction_with_spinner(&transaction)?;
 
     println!("Authority: {}", new_authority_address);
 
@@ -158,7 +158,7 @@ pub fn deploy(
     );
     transaction.sign(&[payer, program], connection.get_latest_blockhash()?);
 
-    connection.send_and_confirm_transaction(&transaction)?;
+    connection.send_and_confirm_transaction_with_spinner(&transaction)?;
 
     println!("Program: {}", program.pubkey());
 
@@ -183,7 +183,7 @@ pub fn set_program_authority(
     );
     transaction.sign(&[current_authority], connection.get_latest_blockhash()?);
 
-    connection.send_and_confirm_transaction(&transaction)?;
+    connection.send_and_confirm_transaction_with_spinner(&transaction)?;
 
     println!("Authority: {}", new_authority_address);
 
@@ -213,7 +213,7 @@ pub fn create_relay_round_proposal(
     );
     transaction.sign(&[payer], connection.get_latest_blockhash()?);
 
-    connection.send_and_confirm_transaction(&transaction)?;
+    connection.send_and_confirm_transaction_with_spinner(&transaction)?;
 
     Ok(())
 }
@@ -288,7 +288,7 @@ pub fn finalize_relay_round_proposal(
     );
     transaction.sign(&[payer], connection.get_latest_blockhash()?);
 
-    connection.send_and_confirm_transaction(&transaction)?;
+    connection.send_and_confirm_transaction_with_spinner(&transaction)?;
 
     Ok(())
 }
