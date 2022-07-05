@@ -1,1 +1,1 @@
-# solana-cli
+# Solana CLI
