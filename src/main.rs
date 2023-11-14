@@ -209,7 +209,7 @@ fn main() -> anyhow::Result<()> {
 
     let (sub_command, sub_matches) = app_matches.subcommand();
 
-    let _ = match (sub_command, sub_matches) {
+    match (sub_command, sub_matches) {
         ("deploy", Some(arg_matches)) => {
             let payer = match value_of::<String>(arg_matches, "payer-keypair") {
                 None => get_payer()?,
@@ -358,7 +358,7 @@ fn main() -> anyhow::Result<()> {
             let round_number =
                 value_of::<u32>(arg_matches, "round_number").ok_or(Error::InvalidRoundNumber)?;
 
-            let proposal_round_number = value_of::<u32>(arg_matches, "proposal_round_number")
+            let proposal_round_num = value_of::<u32>(arg_matches, "proposal_round_number")
                 .ok_or(Error::InvalidProposalRoundNumber)?;
 
             let proposal_relays = values_of::<String>(arg_matches, "proposal_relays")
@@ -373,12 +373,13 @@ fn main() -> anyhow::Result<()> {
                 .ok_or(Error::InvalidRoundNumber)?;
 
             let proposal = RelayRoundProposalEventWithLen::new(
-                proposal_round_number,
+                proposal_round_num,
                 relays,
                 proposal_round_end,
-            )?;
+            );
 
             let proposal_pubkey = solana_bridge::round_loader::get_proposal_address(
+                round_number,
                 event_timestamp,
                 event_transaction_lt,
                 &event_configuration,
@@ -389,6 +390,7 @@ fn main() -> anyhow::Result<()> {
 
             create_relay_round_proposal(
                 &payer,
+                round_number,
                 event_timestamp,
                 event_transaction_lt,
                 event_configuration,

@@ -100,7 +100,7 @@ where
 
 pub fn get_keypair_file(program_path: &str) -> PathBuf {
     let mut keypair_file = PathBuf::new();
-    keypair_file.push(&program_path);
+    keypair_file.push(program_path);
 
     let mut filename = keypair_file.file_stem().unwrap().to_os_string();
     filename.push("-keypair");

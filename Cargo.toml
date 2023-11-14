@@ -8,19 +8,19 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0"
 bincode = "1.3"
-borsh = "0.9"
+borsh = "0.10"
 clap = "2.33.3"
-console = "0.14.0"
+console = "0.15"
 home = "0.5.3"
 thiserror = "1.0"
 yaml-rust = "0.4"
 
-solana-clap-utils = "=1.9.28"
-solana-client = "=1.9.28"
-solana-program = "=1.9.28"
-solana-sdk = "=1.9.28"
+solana-clap-utils = "1.16"
+solana-client = "1.16"
+solana-program = "1.16"
+solana-sdk = "1.16"
 
-solana-bridge = { version = "0.1", git = "ssh://git@gitlab.dexpa.io/solana-everscale-bridge/solana-bridge" }
+solana-bridge = { version = "0.1", git = "https://github.com/broxus/octusbridge-solana-contracts.git" }
 
 
 [[bin]]

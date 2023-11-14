@@ -38,7 +38,7 @@ pub fn create_buffer(
     utils::print_header("Creating buffer");
 
     let minimum_balance = connection.get_minimum_balance_for_rent_exemption(
-        UpgradeableLoaderState::programdata_len(program_len)?,
+        UpgradeableLoaderState::size_of_programdata(program_len),
     )?;
 
     let mut transaction = Transaction::new_with_payer(
@@ -151,7 +151,7 @@ pub fn deploy(
             buffer_pubkey,
             &payer.pubkey(),
             connection
-                .get_minimum_balance_for_rent_exemption(UpgradeableLoaderState::program_len()?)?,
+                .get_minimum_balance_for_rent_exemption(UpgradeableLoaderState::size_of_program())?,
             max_data_len,
         )?,
         Some(&payer.pubkey()),
@@ -192,6 +192,7 @@ pub fn set_program_authority(
 
 pub fn create_relay_round_proposal(
     payer: &Keypair,
+    round_number: u32,
     event_timestamp: u32,
     event_transaction_lt: u64,
     event_configuration: Pubkey,
@@ -204,6 +205,7 @@ pub fn create_relay_round_proposal(
         &[solana_bridge::round_loader::create_proposal_ix(
             &payer.pubkey(),
             &payer.pubkey(),
+            round_number,
             event_timestamp,
             event_transaction_lt,
             event_configuration,
@@ -230,7 +232,6 @@ pub fn write_relay_round_proposal(
 
     let create_msg = |offset: u32, bytes: Vec<u8>| {
         let instruction = solana_bridge::round_loader::write_proposal_ix(
-            &payer.pubkey(),
             proposal_pubkey,
             offset,
             bytes,
