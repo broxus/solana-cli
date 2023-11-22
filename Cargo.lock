@@ -511,7 +511,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4114279215a005bc675e386011e594e1d9b800918cea18fcadadcce864a2046b"
 dependencies = [
  "borsh-derive 0.10.3",
- "hashbrown 0.13.2",
+ "hashbrown 0.12.3",
 ]
 
 [[package]]
@@ -587,7 +587,7 @@ dependencies = [
 [[package]]
 name = "bridge-derive"
 version = "0.1.0"
-source = "git+https://github.com/broxus/octusbridge-solana-contracts.git#6fd1dfc13c4912a94fecd004d0829aa7380ac693"
+source = "git+https://github.com/broxus/octusbridge-solana-contracts.git#021b8bc02b8a67b9c0952255df2b71b8c3dcd561"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -598,7 +598,7 @@ dependencies = [
 [[package]]
 name = "bridge-utils"
 version = "0.1.0"
-source = "git+https://github.com/broxus/octusbridge-solana-contracts.git#6fd1dfc13c4912a94fecd004d0829aa7380ac693"
+source = "git+https://github.com/broxus/octusbridge-solana-contracts.git#021b8bc02b8a67b9c0952255df2b71b8c3dcd561"
 dependencies = [
  "bincode",
  "borsh 0.10.3",
@@ -1495,6 +1495,9 @@ name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
+dependencies = [
+ "ahash 0.7.7",
+]
 
 [[package]]
 name = "hashbrown"
@@ -2704,7 +2707,7 @@ dependencies = [
 [[package]]
 name = "round-loader"
 version = "0.1.0"
-source = "git+https://github.com/broxus/octusbridge-solana-contracts.git#6fd1dfc13c4912a94fecd004d0829aa7380ac693"
+source = "git+https://github.com/broxus/octusbridge-solana-contracts.git#021b8bc02b8a67b9c0952255df2b71b8c3dcd561"
 dependencies = [
  "bincode",
  "borsh 0.10.3",
@@ -3131,7 +3134,7 @@ dependencies = [
 [[package]]
 name = "solana-bridge"
 version = "0.1.0"
-source = "git+https://github.com/broxus/octusbridge-solana-contracts.git#6fd1dfc13c4912a94fecd004d0829aa7380ac693"
+source = "git+https://github.com/broxus/octusbridge-solana-contracts.git#021b8bc02b8a67b9c0952255df2b71b8c3dcd561"
 dependencies = [
  "borsh 0.10.3",
  "bridge-utils",
@@ -4272,7 +4275,7 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 [[package]]
 name = "token-proxy"
 version = "0.1.0"
-source = "git+https://github.com/broxus/octusbridge-solana-contracts.git#6fd1dfc13c4912a94fecd004d0829aa7380ac693"
+source = "git+https://github.com/broxus/octusbridge-solana-contracts.git#021b8bc02b8a67b9c0952255df2b71b8c3dcd561"
 dependencies = [
  "base64 0.21.5",
  "bincode",
