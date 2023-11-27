@@ -148,7 +148,6 @@ fn main() -> anyhow::Result<()> {
                 .arg(
                     Arg::with_name("configuration")
                         .long("configuration")
-                        .validator(is_valid_pubkey)
                         .value_name("CONFIGURATION")
                         .takes_value(true)
                         .required(true)
@@ -174,7 +173,6 @@ fn main() -> anyhow::Result<()> {
                     Arg::with_name("proposal_relays")
                         .long("proposal-relays")
                         .value_name("PROPOSAL_RELAYS")
-                        .validator(is_valid_pubkey)
                         .takes_value(true)
                         .required(true)
                         .min_values(MIN_RELAYS as u64)
@@ -349,11 +347,14 @@ fn main() -> anyhow::Result<()> {
             let event_transaction_lt = value_of::<u64>(arg_matches, "transaction_lt")
                 .ok_or(Error::InvalidTransactionLt)?;
 
-            let event_configuration = Pubkey::from_str(
-                value_of::<String>(arg_matches, "configuration")
-                    .ok_or(Error::InvalidConfiguration)?
-                    .as_str(),
-            )?;
+            let event_configuration = {
+                let bytes = hex::decode(
+                    value_of::<String>(arg_matches, "configuration")
+                        .ok_or(Error::InvalidConfiguration)?
+                        .as_str(),
+                )?;
+                Pubkey::try_from(bytes.as_slice())?
+            };
 
             let round_number =
                 value_of::<u32>(arg_matches, "round_number").ok_or(Error::InvalidRoundNumber)?;
@@ -366,17 +367,15 @@ fn main() -> anyhow::Result<()> {
 
             let mut relays = vec![];
             for proposal_relay in proposal_relays {
-                relays.push(Pubkey::from_str(&proposal_relay)?);
+                let bytes = hex::decode(&proposal_relay)?;
+                relays.push(Pubkey::try_from(bytes.as_slice())?);
             }
 
             let proposal_round_end = value_of::<u32>(arg_matches, "proposal_round_end")
                 .ok_or(Error::InvalidRoundNumber)?;
 
-            let proposal = RelayRoundProposalEventWithLen::new(
-                proposal_round_num,
-                relays,
-                proposal_round_end,
-            );
+            let proposal =
+                RelayRoundProposalEventWithLen::new(proposal_round_num, relays, proposal_round_end);
 
             let proposal_pubkey = solana_bridge::round_loader::get_proposal_address(
                 round_number,
